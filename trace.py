@@ -88,7 +88,16 @@ class intensityTrace:
     
         return p   
   
+    
+    def log_alpha(self, forward, x_trace, trans_m, y, s, t, model):
+        p = 0
+        for i in range(y+1):
+            p+= np.exp(forward[i, (t-1)] + np.log(trans_m[i,s]) )
+        
+        alpha_bar = np.log(model.p_x_i_given_z_i(x_trace[t], s)) + np.log(p)
+        return alpha_bar
   
+    
     def forward_alg(self, x_trace, trans_m, y, p_init, model):
         forward = np.zeros((y+1, len(x_trace)))
         for s in range(y+1):
@@ -101,6 +110,44 @@ class intensityTrace:
         fwrd_prob = np.sum(forward[:,-1])
     
         return fwrd_prob
+    
+    
+    def forward_log(self, x_trace, trans_m, y, p_init, model):
+        forward = np.zeros((y+1, len(x_trace)))
+        for s in range(y+1):
+            forward[s,0] = np.log(p_init[s])+ np.log(model.p_x_i_given_z_i(x_trace[0], s))
+        for i in range(len(x_trace)-1):
+            t = i+1
+            for s in range(y+1):
+                forward[s,t] = self.log_alpha(forward, x_trace, trans_m, y, s, t, model)
+            
+        fwrd_prob = np.sum(forward[:,-1]) # need to change to account for log rules
+    
+        return fwrd_prob, forward
+    
+    
+    def norm_forward(self, x_trace, trans_m, y, p_init, model):
+        forward = np.zeros((y+1, len(x_trace)))
+        scale_fs = np.zeros((len(x_trace)))
+        for s in range(y+1):
+            forward[s,0] = p_init[s]*model.p_x_i_given_z_i(x_trace[0], s)
+        scale_fs[0] = 1 / np.sum(forward[:,0])
+        forward[:,0] = forward[:,0] * scale_fs[0]
+        for i in range(len(x_trace)-1):
+            t = i+1
+            for s in range(y+1):
+                forward[s,t] = self.alpha(forward, x_trace, trans_m, y, s, t, model)
+            
+            scale_fs[t] = 1 / np.sum(forward[:,t])
+            forward[:,t] = forward[:,t] * scale_fs[t]
+            
+        fwrd_prob = np.sum(forward[:,-1]) # by definition will sum up to 1 so prob ~ prod(scale_fs)
+        log_fwrd_prob = np.sum(np.log(scale_fs))
+        
+        
+    
+        return log_fwrd_prob#, forward, scale_fs
+    
     
     def gen_trace(self, y):
         fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
@@ -119,34 +166,14 @@ class intensityTrace:
         for y in range(20):
             prob_trace_t, trans_m_t = self.markov_trace(y, limit=True)
             p_init_t = prob_trace_t[:,-1]
-            fwrd_prob = self.forward_alg(x_trace, trans_m_t, y, p_init_t, fluorescent_model)
+            fwrd_prob = self.norm_forward(x_trace, trans_m_t, y, p_init_t, fluorescent_model)
             probs[y] = fwrd_prob
             print(fwrd_prob)
-        print(f'most likely {np.argmax(probs)} ')
+        print(f'most likely {np.argmin(probs)} ')
         return probs
 
+
    
-
-    def log_alpha(self, forward, x_trace, trans_m, y, s, t, model):
-        p = 0
-        for i in range(y+1):
-            p+= np.exp(forward[i, (t-1)] + np.log(trans_m[i,s]) )
-        
-        alpha_bar = np.log(model.p_x_i_given_z_i(x_trace[t], s)) + np.log(p)
-        return alpha_bar
-
-    def forward_log(self, x_trace, trans_m, y, p_init, model):
-        forward = np.zeros((y+1, len(x_trace)))
-        for s in range(y+1):
-            forward[s,0] = np.log(p_init[s])+ np.log(model.p_x_i_given_z_i(x_trace[0], s))
-        for i in range(len(x_trace)-1):
-            t = i+1
-            for s in range(y+1):
-                forward[s,t] = self.log_alpha(forward, x_trace, trans_m, y, s, t, model)
-            
-        fwrd_prob = np.sum(forward[:,-1])
-    
-        return fwrd_prob
     
     def single_run(self, y_true, y_test):
         fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
@@ -156,9 +183,9 @@ class intensityTrace:
         
         prob_trace_t, trans_m_t = self.markov_trace(y_test, limit=True)
         p_init_t = prob_trace_t[:,-1]
-        fwrd_prob = self.forward_log(x_trace, trans_m_t, y_test, p_init_t, fluorescent_model)
+        log_fwrd_prob, forward, scale_fs  = self.norm_forward(x_trace, trans_m_t, y_test, p_init_t, fluorescent_model)
         
-        return fwrd_prob
+        return log_fwrd_prob, forward, scale_fs
         
     
 
