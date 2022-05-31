@@ -42,10 +42,11 @@ class intensityTrace:
         return trans_m
 
 
-
-
     def markov_trace(self, y, limit=False):
-    
+        '''
+        - probabilities of model being in state z at each time_step
+        - also returns transition matrix for convinience
+        '''
         c_state = np.ones(y+1) / (y+1)
     
         trans_m = self.c_trans_matrix(y)
@@ -63,6 +64,11 @@ class intensityTrace:
     
 
     def forward_pass(self, prob_trace, trans_m):
+        '''
+        - generates a time series of states given a transition matrix and equillibrium state probabilities
+        - returns:  p_init: the initial probabilities of model being in each state
+                    states: array of the state of the model at each time_point
+        '''
         p_init = prob_trace[:,-1]
         initial_state = list(stats.multinomial.rvs(1, p_init)).index(1)
         states = [initial_state]
@@ -74,7 +80,10 @@ class intensityTrace:
 
 
     def x_given_z_trace(self, states, model):
-        #model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0)
+        '''
+         - converts an array of states to intensities
+         - returns: x_trace: trace of intensities over time
+        '''
         x_trace = np.zeros((len(states)))
         for i in range(len(states)):
             x_trace[i] = model.sample_x_given_y(y=[states[i]])
@@ -82,51 +91,23 @@ class intensityTrace:
  
 
     def alpha(self, forward, x_trace, trans_m, y, s, t, model):
+        '''
+        - a recursive element of the forward algorithm
+        '''
         p = 0
         for i in range(y+1):
             p+= forward[i, (t-1)] * trans_m[i,s]*model.p_x_i_given_z_i(x_trace[t], s)
     
         return p   
-  
-    
-    def log_alpha(self, forward, x_trace, trans_m, y, s, t, model):
-        p = 0
-        for i in range(y+1):
-            p+= np.exp(forward[i, (t-1)] + np.log(trans_m[i,s]) )
-        
-        alpha_bar = np.log(model.p_x_i_given_z_i(x_trace[t], s)) + np.log(p)
-        return alpha_bar
-  
-    
-    def forward_alg(self, x_trace, trans_m, y, p_init, model):
-        forward = np.zeros((y+1, len(x_trace)))
-        for s in range(y+1):
-            forward[s,0] = p_init[s]*model.p_x_i_given_z_i(x_trace[0], s)
-        for i in range(len(x_trace)-1):
-            t = i+1
-            for s in range(y+1):
-                forward[s,t] = self.alpha(forward, x_trace, trans_m, y, s, t, model)
-            
-        fwrd_prob = np.sum(forward[:,-1])
-    
-        return fwrd_prob
-    
-    
-    def forward_log(self, x_trace, trans_m, y, p_init, model):
-        forward = np.zeros((y+1, len(x_trace)))
-        for s in range(y+1):
-            forward[s,0] = np.log(p_init[s])+ np.log(model.p_x_i_given_z_i(x_trace[0], s))
-        for i in range(len(x_trace)-1):
-            t = i+1
-            for s in range(y+1):
-                forward[s,t] = self.log_alpha(forward, x_trace, trans_m, y, s, t, model)
-            
-        fwrd_prob = np.sum(forward[:,-1]) # need to change to account for log rules
-    
-        return fwrd_prob, forward
     
     
     def norm_forward(self, x_trace, trans_m, y, p_init, model):
+        ''' 
+        - uses the forward algorithm to compute p(x_trace | y)
+        - rescales probabiliteis at each time-point to avoid small number collapse
+        - records and uses scale factors to compute total likelyhood
+        - returns: log_fwrd_prob: proportional to 1 / p(x_trace | y)
+        '''
         forward = np.zeros((y+1, len(x_trace)))
         scale_fs = np.zeros((len(x_trace)))
         for s in range(y+1):
@@ -144,8 +125,6 @@ class intensityTrace:
         fwrd_prob = np.sum(forward[:,-1]) # by definition will sum up to 1 so prob ~ prod(scale_fs)
         log_fwrd_prob = np.sum(np.log(scale_fs))
         
-        
-    
         return log_fwrd_prob#, forward, scale_fs
     
     
