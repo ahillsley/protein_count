@@ -43,6 +43,25 @@ class intensityTrace:
             
         return trans_m
 
+    def check_tm(self, trans_m):
+        ''' makes sure that all columns sum to 1
+        - for big Ys, rounding errors can make p > 1
+        - slightly sketchy, but just subtract difference from largest prob
+        - modded to work for both trans_m and inital probabilities (p_init)
+        '''
+        if len(trans_m.shape) == 1:
+            prob_total = np.sum(trans_m[:])
+            pos = np.argmax(trans_m[:])
+            trans_m[pos] = trans_m[pos] - (prob_total-1)
+        else:    
+            for i in range(trans_m.shape[1]):
+                prob_total = np.sum(trans_m[i,:])
+                if prob_total > 1.0:
+                    pos = np.argmax(trans_m[i,:])
+                    trans_m[i,pos] = trans_m[i,pos] - (prob_total-1)
+        
+        return trans_m
+
 
     def markov_trace(self, y, limit=False):
         '''
@@ -70,7 +89,8 @@ class intensityTrace:
         - returns:  p_init: the initial probabilities of model being in each state
                     states: array of the state of the model at each time_point
         '''
-        p_init = prob_trace[:,-1]
+        trans_m = self.check_tm(trans_m)
+        p_init = self.check_tm(prob_trace[:,-1])
         initial_state = list(stats.multinomial.rvs(1, p_init)).index(1)
         states = [initial_state]
         for i in range(self.num_frames-1):
@@ -171,6 +191,18 @@ class intensityTrace:
         
         return log_fwrd_prob
     
+    def compare_runs(self, x_true, y_test):
+        ''' 
+        - simulate an intensity trace given y_true, then calculate probability 
+            that same trace could have arrisen from y_test
+        '''
+        #fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+        prob_trace_t, trans_m_t = self.markov_trace(y_test, limit=True)
+        p_init_t = prob_trace_t[:,-1]
+        log_fwrd_prob  = self.norm_forward(x_true, trans_m_t, y_test, p_init_t, self.model)
+        
+        return log_fwrd_prob
+    
 
 def pred_y_sweep():
    fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
@@ -205,6 +237,10 @@ def pred_y_sweep():
    
    return
            
+
+    
+    
+
 
      
         
