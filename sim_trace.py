@@ -11,17 +11,19 @@ from fluorescence_model import FluorescenceModel
 
 class intensityTrace:
     '''
-    
+    - simulated intensity trace given: 
+            -fluorescent model 
+            -blinking event probabilities
     '''
     
     
-    def __init__(self, p_on, p_off, step_time, num_frames):
+    def __init__(self, p_on, p_off, step_time, num_frames, model):
         
         self.p_on = p_on
         self.p_off = p_off
         self.step_time = step_time
         self.num_frames = num_frames
-        
+        self.model = model
     
     def c_trans_matrix(self, y):
         ''' 
@@ -42,12 +44,12 @@ class intensityTrace:
         return trans_m
 
 
-
-
     def markov_trace(self, y, limit=False):
-    
+        '''
+        - probabilities of model being in state z at each time_step
+        - also returns transition matrix for convinience
+        '''
         c_state = np.ones(y+1) / (y+1)
-    
         trans_m = self.c_trans_matrix(y)
         num_steps = self.num_frames
         if limit == True:
@@ -63,6 +65,11 @@ class intensityTrace:
     
 
     def forward_pass(self, prob_trace, trans_m):
+        '''
+        - generates a time series of states given a transition matrix and equillibrium state probabilities
+        - returns:  p_init: the initial probabilities of model being in each state
+                    states: array of the state of the model at each time_point
+        '''
         p_init = prob_trace[:,-1]
         initial_state = list(stats.multinomial.rvs(1, p_init)).index(1)
         states = [initial_state]
@@ -74,7 +81,10 @@ class intensityTrace:
 
 
     def x_given_z_trace(self, states, model):
-        #model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0)
+        '''
+         - converts an array of states to intensities
+         - returns: x_trace: trace of intensities over time
+        '''
         x_trace = np.zeros((len(states)))
         for i in range(len(states)):
             x_trace[i] = model.sample_x_given_y(y=[states[i]])
@@ -82,88 +92,89 @@ class intensityTrace:
  
 
     def alpha(self, forward, x_trace, trans_m, y, s, t, model):
+        '''
+        - a recursive element of the forward algorithm
+        '''
         p = 0
         for i in range(y+1):
             p+= forward[i, (t-1)] * trans_m[i,s]*model.p_x_i_given_z_i(x_trace[t], s)
     
         return p   
-  
-  
-    def forward_alg(self, x_trace, trans_m, y, p_init, model):
+    
+    
+    def norm_forward(self, x_trace, trans_m, y, p_init, model):
+        ''' 
+        - uses the forward algorithm to compute p(x_trace | y)
+        - rescales probabiliteis at each time-point to avoid small number collapse
+        - records and uses scale factors to compute total likelyhood
+        - returns: log_fwrd_prob: proportional to 1 / p(x_trace | y)
+        '''
         forward = np.zeros((y+1, len(x_trace)))
+        scale_fs = np.zeros((len(x_trace)))
         for s in range(y+1):
             forward[s,0] = p_init[s]*model.p_x_i_given_z_i(x_trace[0], s)
+        scale_fs[0] = 1 / np.sum(forward[:,0])
+        forward[:,0] = forward[:,0] * scale_fs[0]
         for i in range(len(x_trace)-1):
             t = i+1
             for s in range(y+1):
                 forward[s,t] = self.alpha(forward, x_trace, trans_m, y, s, t, model)
             
-        fwrd_prob = np.sum(forward[:,-1])
+            scale_fs[t] = 1 / np.sum(forward[:,t])
+            forward[:,t] = forward[:,t] * scale_fs[t]
+            
+        fwrd_prob = np.sum(forward[:,-1]) # by definition will sum up to 1 so prob ~ prod(scale_fs)
+        log_fwrd_prob = np.sum(np.log(scale_fs))
+        
+        return log_fwrd_prob
     
-        return fwrd_prob
     
     def gen_trace(self, y):
-        fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+        '''
+        - generate a single intensity trace, given y emitters
+        - returns an intensity trace
+        '''
+        #fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
         prob_trace, trans_m = self.markov_trace(y)
         p_init, states = self.forward_pass(prob_trace, trans_m)
-        x_trace = self.x_given_z_trace(states, fluorescent_model)
+        x_trace = self.x_given_z_trace(states, self.model)
         plt.plot(np.linspace(0,(len(x_trace)*self.step_time/60), num=len(x_trace)), x_trace)
         return x_trace
         
     def demo_run(self, y):
-        fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
-        prob_trace, trans_m = self.markov_trace(y)
-        p_init, states = self.forward_pass(prob_trace, trans_m)
-        x_trace = self.x_given_z_trace(states, fluorescent_model)
+        ''' 
+        - generates a trace given y emitters, then calculates p(x | y) for y = 0:20
+        '''
+        #fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+        x_trace = self.gen_trace(y)
         probs = np.zeros((20))
         for y in range(20):
             prob_trace_t, trans_m_t = self.markov_trace(y, limit=True)
             p_init_t = prob_trace_t[:,-1]
-            fwrd_prob = self.forward_alg(x_trace, trans_m_t, y, p_init_t, fluorescent_model)
+            fwrd_prob = self.norm_forward(x_trace, trans_m_t, y, p_init_t, self.model)
             probs[y] = fwrd_prob
             print(fwrd_prob)
-        print(f'most likely {np.argmax(probs)} ')
+        print(f'most likely {np.argmin(probs)} ')
         return probs
 
-   
-
-    def log_alpha(self, forward, x_trace, trans_m, y, s, t, model):
-        p = 0
-        for i in range(y+1):
-            p+= np.exp(forward[i, (t-1)] + np.log(trans_m[i,s]) )
-        
-        alpha_bar = np.log(model.p_x_i_given_z_i(x_trace[t], s)) + np.log(p)
-        return alpha_bar
-
-    def forward_log(self, x_trace, trans_m, y, p_init, model):
-        forward = np.zeros((y+1, len(x_trace)))
-        for s in range(y+1):
-            forward[s,0] = np.log(p_init[s])+ np.log(model.p_x_i_given_z_i(x_trace[0], s))
-        for i in range(len(x_trace)-1):
-            t = i+1
-            for s in range(y+1):
-                forward[s,t] = self.log_alpha(forward, x_trace, trans_m, y, s, t, model)
-            
-        fwrd_prob = np.sum(forward[:,-1])
-    
-        return fwrd_prob
     
     def single_run(self, y_true, y_test):
-        fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
-        prob_trace, trans_m = self.markov_trace(y_true)
-        p_init, states = self.forward_pass(prob_trace, trans_m)
-        x_trace = self.x_given_z_trace(states, fluorescent_model)
-        
+        ''' 
+        - simulate an intensity trace given y_true, then calculate probability 
+            that same trace could have arrisen from y_test
+        '''
+        #fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+        x_trace = self.gen_trace(y_true)
         prob_trace_t, trans_m_t = self.markov_trace(y_test, limit=True)
         p_init_t = prob_trace_t[:,-1]
-        fwrd_prob = self.forward_log(x_trace, trans_m_t, y_test, p_init_t, fluorescent_model)
+        log_fwrd_prob  = self.norm_forward(x_trace, trans_m_t, y_test, p_init_t, self.model)
         
-        return fwrd_prob
-        
+        return log_fwrd_prob
     
 
 def pred_y_sweep():
-   trace = intensityTrace(0.5, 0.5, 0.1, 100)
+   fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+   trace = intensityTrace(0.001, 0.01, 0.1, 1000, fluorescent_model)
    probs = np.zeros((20,20))
    for i in range(20):
        probs[:,i] = trace.demo_run(i)
