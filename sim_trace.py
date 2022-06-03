@@ -50,7 +50,6 @@ class intensityTrace:
         - also returns transition matrix for convinience
         '''
         c_state = np.ones(y+1) / (y+1)
-    
         trans_m = self.c_trans_matrix(y)
         num_steps = self.num_frames
         if limit == True:
@@ -168,14 +167,14 @@ class intensityTrace:
         x_trace = self.gen_trace(y_true)
         prob_trace_t, trans_m_t = self.markov_trace(y_test, limit=True)
         p_init_t = prob_trace_t[:,-1]
-        log_fwrd_prob, forward, scale_fs  = self.norm_forward(x_trace, trans_m_t, y_test, p_init_t, self.model)
+        log_fwrd_prob  = self.norm_forward(x_trace, trans_m_t, y_test, p_init_t, self.model)
         
-        return log_fwrd_prob, forward, scale_fs
-        
+        return log_fwrd_prob
     
 
 def pred_y_sweep():
-   trace = intensityTrace(0.5, 0.5, 0.1, 100)
+   fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+   trace = intensityTrace(0.001, 0.01, 0.1, 1000, fluorescent_model)
    probs = np.zeros((20,20))
    for i in range(20):
        probs[:,i] = trace.demo_run(i)
