@@ -171,6 +171,18 @@ class intensityTrace:
         
         return log_fwrd_prob
     
+    def compare_runs(self, x_true, y_test):
+        ''' 
+        - simulate an intensity trace given y_true, then calculate probability 
+            that same trace could have arrisen from y_test
+        '''
+        #fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+        prob_trace_t, trans_m_t = self.markov_trace(y_test, limit=True)
+        p_init_t = prob_trace_t[:,-1]
+        log_fwrd_prob  = self.norm_forward(x_true, trans_m_t, y_test, p_init_t, self.model)
+        
+        return log_fwrd_prob
+    
 
 def pred_y_sweep():
    fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
@@ -205,6 +217,10 @@ def pred_y_sweep():
    
    return
            
+
+    
+    
+
 
      
         
