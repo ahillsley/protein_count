@@ -67,7 +67,7 @@ def effect_of_p_on(y, repeats):
                 probs[y_pos,i,j] = log_prob
                 y_pos += 1
         
-            print(np.argmin(probs[:,i]))
+            print(np.argmin(probs[:,i,j]))
         
     df = pd.DataFrame(probs)
     df.to_csv('test.csv')
