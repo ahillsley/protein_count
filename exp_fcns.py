@@ -41,40 +41,48 @@ def pred_y_sweep():
    
    return
 
-def effect_of_p_on(y, repeats):
-    test_p_ons = np.logspace(-4,-1,50)
-    test_ys = range(y-3, y+4)
+def p_on_off_sweep(y, repeats):
+    test_p_ons = np.linspace(0.001,0.999, 11)
+    test_p_offs = np.linspace(0.001,0.999, 11)
+    test_ys = range(y-2, y+3)
     if y-3 < 0:
-        test_ys = range(0, y+4)
-    probs = np.zeros((len(test_ys), len(test_p_ons), repeats))
+        test_ys = range(0, y+3)
+    probs = np.zeros((len(test_p_offs), len(test_p_ons),len(test_ys) ,repeats))
+    fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
     
-    for j in range(repeats):
-        fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
-        true_trace = intensityTrace(0.003, 0.1, 0.1, 1000, fluorescent_model)
+    for q in range(repeats):
     
-        x_trace = true_trace.gen_trace(y)
-        fig, ax = plt.subplots(1,1)
-        ax.plot(x_trace)
-        fig.savefig('true_trace.png')
-    
+        for j in range(len(test_p_offs)):
+            for i in range(len(test_p_ons)):
+                test_trace = intensityTrace(test_p_ons[i], test_p_offs[j], 0.1, 1000, fluorescent_model)
+                x_trace = test_trace.gen_trace(y)
+                y_pos = 0
+                for y_test in test_ys:
+                    log_prob = test_trace.compare_runs(x_trace, y_test)
+                    print(log_prob)
+                    probs[j,i,y_pos,q] = log_prob
+                    y_pos += 1
         
-        for i in range(len(test_p_ons)):
-            test_trace = intensityTrace(test_p_ons[i], 0.1, 0.1, 1000, fluorescent_model)
-            y_pos = 0
-            for y_test in test_ys:
-                log_prob = test_trace.compare_runs(x_trace, y_test)
-                print(log_prob)
-                probs[y_pos,i,j] = log_prob
-                y_pos += 1
-        
-            print(np.argmin(probs[:,i]))
-        
-    df = pd.DataFrame(probs)
-    df.to_csv('test.csv')
+    #df = pd.DataFrame(probs)
+    #df.to_csv('220603_p_on_var.csv')
+    np.save('p_on_off_sweep.npy', probs)
     
     return
 
 
+def fine_sweep_percent(p_on, p_off, y, repeats):
+    test_p_ons = np.linspace((p_on-0.05*p_on), (p_on+0.05*p_on), 10)
+    test_p_offs = np.linspace((p_off-0.05*p_off), (p_off+0.05*p_off), 10)
+    
+    for q in range(repeats):
+        fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+        true_trace = intensityTrace(p_on, p_off, 0.1, 1000, fluorescent_model)
+        x_trace = true_trace.gen_trace(y)
+        
+        for j in range(len(test_p_offs)):
+            for i in range(len(test_p_ons)):
+                print('hello')
+    return
 
 
 def test_job(y, p_on):

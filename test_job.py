@@ -9,5 +9,5 @@ from fluorescence_model import FluorescenceModel
 from sim_trace import intensityTrace
 from exp_fcns import *
 
-effect_of_p_on(15, 10)
+p_on_off_sweep(15, 5)
 

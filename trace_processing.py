@@ -5,7 +5,7 @@ from pomegranate import *
 import pandas as pd
 
 
-file_path = '../../Images/0525_5nM_1.tif'
+file_path = '../Images/0525_5nM_1.tif'
 ''' 39, 91 is a good sample trace'''
 
 '''
