@@ -141,13 +141,13 @@ class intensityTrace:
                 forward[s,t] = self.alpha(forward, x_trace, trans_m, y, s, t, model)
             
             scale_fs[t] = 1 / np.sum(forward[:,t])
-            forward[:,t] = forward[:,t] * scale_fs[t]
+            forward[:,t] = forward[:,t] * scale_fs[t] 
             
         fwrd_prob = np.sum(forward[:,-1]) # by definition will sum up to 1 so prob ~ prod(scale_fs)
         log_fwrd_prob = np.sum(np.log(scale_fs))
         
         return log_fwrd_prob
-    
+                
     
     def gen_trace(self, y):
         '''
@@ -206,7 +206,7 @@ class intensityTrace:
 
 def pred_y_sweep():
    fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
-   trace = intensityTrace(0.001, 0.01, 0.1, 1000, fluorescent_model)
+   trace = intensityTrace(0.01, 0.1, 0.1, 100, fluorescent_model)
    probs = np.zeros((20,20))
    for i in range(20):
        probs[:,i] = trace.demo_run(i)

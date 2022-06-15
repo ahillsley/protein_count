@@ -63,10 +63,18 @@ def p_on_off_sweep(y, repeats):
                     probs[j,i,y_pos,q] = log_prob
                     y_pos += 1
         
+<<<<<<< HEAD
+<<<<<<< HEAD
+    #df = pd.DataFrame(probs)
+    #df.to_csv('220603_p_on_var.csv')
+    np.save('p_on_off_sweep.npy', probs)
+=======
+=======
 
     #df = pd.DataFrame(probs)
     #df.to_csv('220603_p_on_var.csv')
     np.save('p_on_off_sweep.npy', probs)
+>>>>>>> 901e1057b929e3e76864c95e66cd845ed8754f60
         for i in range(len(test_p_ons)):
             test_trace = intensityTrace(test_p_ons[i], 0.1, 0.1, 1000, fluorescent_model)
             y_pos = 0
@@ -80,7 +88,11 @@ def p_on_off_sweep(y, repeats):
         
     df = pd.DataFrame(probs)
     df.to_csv('test.csv')
+<<<<<<< HEAD
+>>>>>>> 504b71f02d69a379437196afe4d6552c2b79a50a
+=======
 
+>>>>>>> 901e1057b929e3e76864c95e66cd845ed8754f60
     
     return
 
