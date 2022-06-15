@@ -3,6 +3,7 @@ import skimage.io, scipy
 import matplotlib.pyplot as plt
 from pomegranate import *
 import pandas as pd
+from fluorescence_model import FluorescenceModel
 
 
 file_path = '../Images/0525_5nM_1.tif'
@@ -99,6 +100,95 @@ class exp_trace:
         
         return noise_params[0], noise_params[1]
     
+  
+    def emmison_m(K, trace, step):
+        B = np.zeros((K,1))
+        for state in range(K):
+            B[state,0] = model.p_x_i_given_zi(trace[step], state)
+        return B
+      
+    def viterbi(x_trace, A, Pi):
+        K = A.shape[0]
+        T = len(x_trace)
+        T1 = np.zeros((K,T), 'd')
+        T2 = np.zeros((K,T), 'B')
+        
+        for state in range(K):
+            T1[state,0] = Pi[state] * model.p_x_i_given_z_i(x_trace[0], state)
+        T2[:,0] = 0
+        
+        for i in range(1, T):           #observations
+            for state in range(K):      #states
+                return
+        
+    def viterbi_mu(y,t,delta, trans_m,s):
+        temp = np.zeros((y+1))
+        for i in range(y+1):
+            temp[i] = delta[i,t-1] * trans_m[i,s]
+        return np.max(temp), np.argmax(temp)
+        
+    def viterbi(x_trace, y, T, model, trans_m, p_init):
+        "initialize"
+        y = 2
+        T = 100
+        
+        delta = np.zeros((y+1, T))
+        sci = np.zeros((y+1, T))
+        
+        ''' initial values '''
+        for s in range(y+1):
+            delta[s,0] = p_init[s] * model.p_x_i_given_z_i(x_trace[0], s)
+        sci[:,0] = 0
+        
+        ''' Propagation'''
+        for t in range(1, T):
+            for s in range(y+1):
+                state_probs, ml_state = viterbi_mu(y,t,delta, trans_m,s)
+                delta[s,t] =  state_probs * model.p_x_i_given_z_i(x_trace[t], s)
+                sci[s,t] = ml_state
+        
+        ''' build to optimal model trajectory output'''
+        x = np.zeros((T))
+        x[-1] = np.argmax(delta[:, T-1])
+        for i in reversed(range(1,T)):
+            x[i-1] = sci[int(x[i]), i]
+            
+        return x, delta, sci
+            
+        
+        
+        
+y = 15
+x_trace = trace.gen_trace(y)       
+prob_trace, trans_m = trace.markov_trace(y)
+p_init = trace.check_tm(prob_trace[:,-1])
+x, delta, sci = viterbi(x_trace, y, 100, model, trans_m, p_init)
+
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
