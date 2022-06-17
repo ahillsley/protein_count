@@ -205,7 +205,7 @@ class intensityTrace:
     
 
 def pred_y_sweep():
-   fluorescent_model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
+   fluorescent_model = FluorescenceModel(p_on=1, μ=(1.0/np.e), σ=0.1, σ_background=0.1, q=0, )
    trace = intensityTrace(0.01, 0.1, 0.1, 100, fluorescent_model)
    probs = np.zeros((20,20))
    for i in range(20):
