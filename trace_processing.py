@@ -192,15 +192,15 @@ class exp_trace:
             
         return x, delta, sci
             
-        
-        
+'''       
+aa 
         
 y = 15
 x_trace = sim_trace.gen_trace(y)       
 p_init, trans_m = sim_trace.markov_trace(y)
 
 x, delta, sci = scale_viterbi(x_trace, y, 3000, fmodel, trans_m, p_init)
-
+'''
 
 ''' full processing'''
 img = read_image(file_path)

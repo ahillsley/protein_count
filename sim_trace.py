@@ -84,6 +84,7 @@ class intensityTrace:
 
     def forward_pass(self, p_init, trans_m):
         '''
+        - NOT A PURE FUNCTION
         - generates a time series of states given a transition matrix and equillibrium state probabilities
         - returns:  p_init: the initial probabilities of model being in each state
                     states: array of the state of the model at each time_point
