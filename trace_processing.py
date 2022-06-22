@@ -3,7 +3,8 @@ import skimage.io, scipy
 import matplotlib.pyplot as plt
 from pomegranate import *
 import pandas as pd
-from fluorescence_model import FluorescenceModel
+from fluorescence_model import FluorescenceModel, model_params
+from sim_trace import intensityTrace
 
 
 file_path = '../Images/0525_5nM_1.tif'
@@ -89,6 +90,15 @@ class exp_trace:
         
         return baseline
     
+    def xy_norm(x_trace):
+        X = np.expand_dims(np.ravel(x_trace),1)
+        model = GeneralMixtureModel.from_samples([LogNormalDistribution, LogNormalDistribution], 2, X)
+        peak_1 = model.distributions[0].parameters[0]
+        peak_2 = model.distributions[1].parameters[0]
+        scale = np.abs(np.exp(peak_1) - np.exp(peak_2))
+        
+        return scale
+    
     def get_σ_bg(self, trace):
         X=np.expand_dims(np.ravel(trace),1)
         model = GeneralMixtureModel.from_samples([NormalDistribution, NormalDistribution], 2, X)
@@ -129,8 +139,8 @@ class exp_trace:
         
     def viterbi(x_trace, y, T, model, trans_m, p_init):
         "initialize"
-        y = 2
-        T = 100
+        #y = 2
+        #T = 100
         
         delta = np.zeros((y+1, T))
         sci = np.zeros((y+1, T))
@@ -154,21 +164,60 @@ class exp_trace:
             x[i-1] = sci[int(x[i]), i]
             
         return x, delta, sci
+    
+    def scale_viterbi(x_trace, y, T, model, trans_m, p_init):
+        "initialize"
+        delta = np.zeros((y+1, T))
+        sci = np.zeros((y+1, T))
+        scale = np.zeros((T))
+        ''' initial values '''
+        for s in range(y+1):
+            delta[s,0] = p_init[s] * model.p_x_i_given_z_i(x_trace[0], s)
+        sci[:,0] = 0
+        
+        ''' Propagation'''
+        for t in range(1, T):
+            for s in range(y+1):
+                state_probs, ml_state = viterbi_mu(y,t,delta, trans_m,s)
+                delta[s,t] =  state_probs * model.p_x_i_given_z_i(x_trace[t], s)
+                sci[s,t] = ml_state
+            scale[t] = 1 / np.sum(delta[:,t])
+            delta[:,t] = delta[:,t] * scale[t]
+        
+        ''' build to optimal model trajectory output'''
+        x = np.zeros((T))
+        x[-1] = np.argmax(delta[:, T-1])
+        for i in reversed(range(1,T)):
+            x[i-1] = sci[int(x[i]), i]
             
-        
-        
+        return x, delta, sci
+            
+'''       
+aa 
         
 y = 15
-x_trace = trace.gen_trace(y)       
-prob_trace, trans_m = trace.markov_trace(y)
-p_init = trace.check_tm(prob_trace[:,-1])
-x, delta, sci = viterbi(x_trace, y, 100, model, trans_m, p_init)
+x_trace = sim_trace.gen_trace(y)       
+p_init, trans_m = sim_trace.markov_trace(y)
 
+x, delta, sci = scale_viterbi(x_trace, y, 3000, fmodel, trans_m, p_init)
+'''
+
+''' full processing'''
+img = read_image(file_path)
+e_trace = exp_trace(39, 91, img)
+trace = e_trace.pixel_t_trace(3)
+sb_trace = trace - e_trace.background_simple(trace)
+scale = xy_norm(trace)
+norm_trace = sb_trace/scale + (1 - np.mean(sb_trace/scale))
+params = model_params(0.01,0.1)
+fmodel = FluorescenceModel(params)
+sim_trace = intensityTrace(params, 0.1, 3000, fmodel)
+p_init, trans_m = sim_trace.markov_trace(1)
+x, delta, sci = scale_viterbi(norm_trace, 1, len(norm_trace), fmodel, trans_m, p_init)
+plt.plot(x, c='r'); plt.plot(norm_trace, c='k')
 
         
-        
-        
-        
+
         
         
         

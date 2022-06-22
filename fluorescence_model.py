@@ -6,6 +6,16 @@ from scipy import integrate
 logger = logging.getLogger(__name__)
 
 
+class model_params:
+    def __init__(self, p_on, p_off, u=1, σ=0.1, σ_background=0.1, q=0, label_eff=1):
+        self.p_on = p_on
+        self.p_off = p_off
+        self.u = u
+        self.σ = σ
+        self.σ_background = σ_background
+        self.q = q
+        self.label_eff = label_eff
+
 class FluorescenceModel:
     '''Simple fluorescence model for amino acid counts in proteins (y), dye
     activity (z), and fluorescence measurements per dye (x)::
@@ -47,14 +57,14 @@ class FluorescenceModel:
             Quantitative Microscopy Measurements)
     '''
 
-    def __init__(self, p_on=0.9, μ=1.0, σ=0.1, σ_background=0.1, q=0):
+    def __init__(self, model_params):
 
-        self.p_on = p_on
-        self.μ = μ
-        self.σ = σ
-        self.σ2 = σ**2
-        self.σ2_background = σ_background**2
-        self.q = q
+        self.p_on = model_params.p_on
+        self.μ = model_params.u
+        self.σ = model_params.σ
+        self.σ2 = model_params.σ**2
+        self.σ2_background = model_params.σ_background**2
+        self.q = model_params.q
 
     def p_x_given_y(self, x, y):
         '''Compute p(x|y).
