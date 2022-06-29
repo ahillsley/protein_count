@@ -217,12 +217,33 @@ x, delta, sci = scale_viterbi(norm_trace, 1, len(norm_trace), fmodel, trans_m, p
 plt.plot(x, c='r'); plt.plot(norm_trace, c='k')
 
         
+params = model_params(0.02,0.1, 1, 0.1, 0.2)     
+fmodel = FluorescenceModel(params)
+sim_trace = intensityTrace(params, 0.1, 600, fmodel)
+p_init, trans_m = sim_trace.markov_trace(50)  
+states = sim_trace.forward_pass(p_init, trans_m)
+x_trace = sim_trace.x_given_z_trace(states)
+#plot_trace(states)
+plot_trace(x_trace)
 
-        
-        
-        
-        
-        
+
+
+params = model_params(0.02,0.1, 1, 0.1, 0.2)     
+fmodel = FluorescenceModel(params)
+sim_trace = intensityTrace(params, 0.1, 600, fmodel)
+probs = np.zeros((2,11))
+y = 50
+
+for r in range(2):
+    true_trace = sim_trace.gen_trace(y)  
+    for i in range(0,11):
+        #print(i)
+        y_test = i+45
+        print(y_test)
+        probs[r,i] = sim_trace.compare_runs(true_trace, y_test)
+   
+    
+
         
         
         

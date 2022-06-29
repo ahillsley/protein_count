@@ -65,6 +65,7 @@ class FluorescenceModel:
         self.σ2 = model_params.σ**2
         self.σ2_background = model_params.σ_background**2
         self.q = model_params.q
+        self.label_eff = model_params.label_eff
 
     def p_x_given_y(self, x, y):
         '''Compute p(x|y).
@@ -134,7 +135,7 @@ class FluorescenceModel:
         else:
             size = y.shape
 
-        z = np.random.binomial(y, self.p_on, size=size)
+        z = np.random.binomial(y, self.label_eff, size=size)
 
         μ = self.μ + np.log(z) - self.q
         σ = np.ones_like(μ)*self.σ
@@ -199,7 +200,7 @@ class FluorescenceModel:
 
     def p_z_i_given_y_i(self, z_i, y_i):
  
-        return scipy.stats.binom.pmf(z_i, y_i, self.p_on)
+        return scipy.stats.binom.pmf(z_i, y_i, self.label_eff)
 
             
             
