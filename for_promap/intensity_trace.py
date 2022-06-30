@@ -10,11 +10,11 @@ class IntensityTrace():
 
     Args:
 
-        trace: 
-            1D np.array of intensity values 
+        trace:
+            1D np.array of intensity values
 
         step_time:
-            the time 
+            the time
 
     '''
     def __init__(self, trace, step_time):
@@ -27,10 +27,13 @@ class IntensityTrace():
         X = np.expand_dims(np.ravel(self.trace), 1)
         model = GeneralMixtureModel.from_samples([NormalDistribution,
                                                   NormalDistribution], 2, X)
+
         background_peak = np.argmin([model.distributions[0].parameters[0],
                                      model.distributions[1].parameters[0]])
-        background_peak_mu = model.distributions[background_peak].parameters[0]
-        background_peak_sigma = model.distributions[background_peak].parameters[1]
+        background_distribution = model.distributions[background_peak]
+
+        background_peak_mu = background_distribution.parameters[0]
+        background_peak_sigma = background_distribution.parameters[1]
 
         threshold = background_peak_mu + 4 * background_peak_sigma
         trim_X = np.expand_dims(X[X > threshold], 1)
