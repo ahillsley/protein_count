@@ -45,9 +45,16 @@ class IntensityTrace():
                                    model_trimmed.distributions[1].parameters[0]])
         signal_peak_mu = np.max(signal_peaks[~np.isnan(signal_peaks)])
 
-        scale = signal_peak_mu - background_peak_mu
+        scale = 1.0/(signal_peak_mu - background_peak_mu)
 
-        self.scaled_trace = self.trace/scale - np.mean(self.trace/scale) + 1
+        # scale, such that distance between peaks is 1
+        self.scaled_trace = self.trace * scale
+
+        # shift, such that mean background is 0
+        self.scaled_trace -= background_peak_mu
+
+        # shift, such that mean background is 1
+        self.scaled_trace += 1
 
         return scale
 
