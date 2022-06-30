@@ -187,7 +187,7 @@ class intensityTrace:
         
         return log_fwrd_prob
     
-           
+         
      
         
 

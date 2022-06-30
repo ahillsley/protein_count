@@ -5,12 +5,13 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from fluorescence_model import FluorescenceModel
+from fluorescence_model import FluorescenceModel, model_params
 from sim_trace import intensityTrace
 
 def pred_y_sweep():
-   model = FluorescenceModel(p_on=1, μ=1.0, σ=0.1, σ_background=0.1, q=0, )
-   trace = intensityTrace(0.01, 0.5, 0.1, 1000, model)
+   params = model_params(0.02,0.1, 1, 0.1, 0.2)     
+   fmodel = FluorescenceModel(params)
+   sim_trace = intensityTrace(params, 0.1, 600, fmodel)
    probs = np.zeros((20,20))
    for i in range(20):
        probs[:,i] = trace.demo_run(i)
