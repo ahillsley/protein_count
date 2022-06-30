@@ -1,9 +1,13 @@
 import numpy as np
 import scipy.stats as stats
+from scipy.optimize import curve_fit
 from FluorescenceModel import FluorescenceModel
 
+
 class TraceModel:
-    ''' Simple Model
+    '''
+    - Models as intensity trace as a hidden markov model
+
     Args:
 
         p_on:
@@ -46,6 +50,58 @@ class TraceModel:
         '''
 
         return
+
+    def fit_viterbi(self, trace, y):
+        '''
+        - Uses the viterbi algorithm to determine the most likely state at
+            each timepoint of the trace
+        - Uses the state infomration to estimate fluorescence and
+            rate paramteres
+
+        Args:
+            trace (np_array):
+                an array of intensity values over time
+
+            y (int):
+                the number of binding sites that gave rise to trace
+        '''
+        # viterbi alg finds most likely state at each timepoint
+        p_initial, transition_m = self._markov_trace(y)
+        states, delta, sci = self._scale_viterbi(trace, y, len(trace),
+                                                 transition_m, p_initial)
+
+        # use state information to estimate fluorescence model parameters
+        on_intensity = np.mean(trace[np.nonzero(states)])
+        on_noise = np.std(trace[np.nonzero(states)])
+        background_noise = np.std(trace[np.where(states == 0)])
+
+        # state change information to estimate bright and dark times
+        state_change = np.where(states[:-1] != states[1:])[0]
+        bright_times = np.zeros((1))
+        dark_times = np.zeros((1))
+        on_off = np.split(states, state_change+1)
+        for i in range(len(on_off)):
+            event_length = len(on_off[i])
+            if np.mean(on_off[i]) == 0:
+                dark_times = np.append(dark_times, event_length)
+            else:
+                bright_times = np.append(bright_times, event_length)
+
+        # build cdf to fit exponential distribution to data
+        dark_cdf_x = np.sort(dark_times)
+        dark_cdf_y = np.arange(len(dark_cdf_x))/len(dark_cdf_x)
+        lam_dark, pcov_d = curve_fit(self._exp_cdf, dark_cdf_x, dark_cdf_y)
+
+        bright_cdf_x = np.sort(bright_times)
+        bright_cdf_y = np.arange(len(bright_cdf_x))/len(bright_cdf_x)
+        lam_bright, pcov_d = curve_fit(self._exp_cdf,
+                                       bright_cdf_x, bright_cdf_y)
+
+        p_on_estimate = lam_dark * np.exp(-lam_dark * self.step_time)
+        p_off_estimate = lam_bright * np.exp(-lam_bright * self.step_time)
+
+        return on_intensity, on_noise, background_noise, \
+            p_on_estimate, p_off_estimate, states
 
     def generate_trace(self, y):
 
@@ -147,3 +203,41 @@ class TraceModel:
                 self.fluorescence_model.p_x_i_given_z_i(x_trace[t], s)
 
         return p
+
+    def _viterbi_mu(self, y, t, delta, trans_m, s):
+        temp = np.zeros((y+1))
+        for i in range(y+1):
+            temp[i] = delta[i, t-1] * trans_m[i, s]
+        return np.max(temp), np.argmax(temp)
+
+    def _scale_viterbi(self, x_trace, y, T, trans_m, p_init):
+        "initialize"
+        delta = np.zeros((y+1, T))
+        sci = np.zeros((y+1, T))
+        scale = np.zeros((T))
+        ''' initial values '''
+        for s in range(y+1):
+            delta[s, 0] = p_init[s] * \
+                self.fluorescence_model.p_x_i_given_z_i(x_trace[0], s)
+        sci[:, 0] = 0
+
+        ''' Propagation'''
+        for t in range(1, T):
+            for s in range(y+1):
+                state_probs, ml_state = self._viterbi_mu(y, t, delta, trans_m, s)
+                delta[s, t] = state_probs * \
+                    self.fluorescence_model.p_x_i_given_z_i(x_trace[t], s)
+                sci[s, t] = ml_state
+            scale[t] = 1 / np.sum(delta[:, t])
+            delta[:, t] = delta[:, t] * scale[t]
+
+        ''' build to optimal model trajectory output'''
+        x = np.zeros((T))
+        x[-1] = np.argmax(delta[:, T-1])
+        for i in reversed(range(1, T)):
+            x[i-1] = sci[int(x[i]), i]
+
+        return x, delta, sci
+
+    def _exp_cdf(self, x, a):
+        return 1 - np.exp(-a * x)

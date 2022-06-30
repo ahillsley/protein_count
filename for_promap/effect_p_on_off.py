@@ -24,9 +24,3 @@ ax = sns.heatmap(probs, vmax = -1704, vmin = -1720, xticklabels=np.around(p_ons,
                  yticklabels=np.around(p_offs,2), cmap='icefire', linewidth=1)
 
 
-a = probs
-a[a> -1705] = 5
-a[a>-1715] = 4
-a[a>-1720] = 3
-a[a>-1730] = 2
-a[a>-1750] = 1

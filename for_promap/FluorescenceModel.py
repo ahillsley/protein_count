@@ -1,9 +1,11 @@
 import numpy as np
 from scipy import integrate
+from pomegranate import GeneralMixtureModel, LogNormalDistribution
 
 
 class ModelParams:
-    def __init__(self, p_on, p_off, u=1, sigma=0.1, sigma_background=0.1, label_eff=1):
+    def __init__(self, p_on, p_off, u=1, sigma=0.1, sigma_background=0.1,
+                 label_eff=1):
         self.p_on = p_on
         self.p_off = p_off
         self.u = u
@@ -14,7 +16,8 @@ class ModelParams:
 
 class FluorescenceModel:
     '''
-    Model
+    - Deals with the intensity measurements
+    - The emmission probabilities of the hidden markov model
 
     Args:
         mu:
@@ -40,13 +43,19 @@ class FluorescenceModel:
         self.sigma2_background = model_params.sigma_background**2
         self.label_eff = model_params.label_eff
 
-    def fit_fluorescence():
+    def fit_fluorescence(self, trace):
         '''
         fit all the parameters needed in fluorescence model
             mu, sigma, sigma_background
         '''
+        X = np.expand_dims(np.ravel(trace), 1)
+        model = GeneralMixtureModel.from_samples([LogNormalDistribution,
+                                                  LogNormalDistribution], 2, X)
+        sigma_background = model.distributions[0].parameters[1]
+        sigma = model.distributions[1].parameters[1]
+        mu = model.distributions[1].parameters[0]
 
-        return
+        return mu, sigma, sigma_background
 
     def sample_x_i_given_z_i(self, z):
         '''
@@ -89,8 +98,8 @@ class FluorescenceModel:
             mu = self.mu + np.log(z_i)
             sigma2 = self.sigma2
 
-        result, uncer = integrate.quad(lambda x: self._log_normal(x_i, mu, sigma2),
-                                       x_i - self.sigma, x_i + self.sigma)
+        result = integrate.romberg(lambda x: self._log_normal(x_i, mu, sigma2),
+                                   x_i - self.sigma, x_i + self.sigma)
         return result
 
     def _log_normal(self, x, mu, sigma2):
