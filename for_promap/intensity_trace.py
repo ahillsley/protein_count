@@ -1,7 +1,7 @@
 import numpy as np
 from pomegranate import GeneralMixtureModel, NormalDistribution
-from FluorescenceModel import ModelParams
-from TraceModel import TraceModel
+from fluorescence_model import ModelParams
+from trace_model import TraceModel
 
 
 class IntensityTrace():

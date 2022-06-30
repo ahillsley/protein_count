@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.stats as stats
 from scipy.optimize import curve_fit
-from FluorescenceModel import FluorescenceModel
+from fluorescence_model import FluorescenceModel
 
 
 class TraceModel:

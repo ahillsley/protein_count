@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pomegranate import GeneralMixtureModel, LogNormalDistribution
 from scipy.optimize import curve_fit
-from TraceModel import TraceModel
-from FluorescenceModel import ModelParams
+from trace_model import TraceModel
+from fluorescence_model import ModelParams
 
 
 params = ModelParams(0.02, 0.1, 1, 0.1, 0.2, 1)
