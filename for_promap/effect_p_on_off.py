@@ -1,6 +1,6 @@
 import numpy as np
-from TraceModel import TraceModel
-from FluorescenceModel import ModelParams
+from trace_model import TraceModel
+from fluorescence_model import ModelParams
 import seaborn as sns
 
 params = ModelParams(0.1, 0.1, 1, 0.1, 0.2, 1)

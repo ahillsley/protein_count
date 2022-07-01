@@ -1,9 +1,9 @@
 import numpy as np
 import skimage.io, scipy
 import pandas as pd
-from FluorescenceModel import ModelParams
-from TraceModel import TraceModel
-from IntensityTrace import IntensityTrace
+from fluorescence_model import ModelParams
+from trace_model import TraceModel
+from intensity_trace import IntensityTrace
 import matplotlib.pyplot as plt
 import seaborn as sns
 
