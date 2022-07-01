@@ -120,7 +120,9 @@ class TraceModel:
             p_on_estimate, p_off_estimate, states
 
     def generate_trace(self, y):
-
+        
+        self._check_parameters()
+        
         p_initial, transition_m = self._markov_trace(y)
         # generate list of states
         initial_state = list(stats.multinomial.rvs(1, p_initial)).index(1)
@@ -138,7 +140,9 @@ class TraceModel:
         return x_trace
 
     def estimate_y(self, trace, guess, search_width):
-
+        
+        self._check_parameters()
+        
         log_probs = np.zeros((search_width*2+1))
         low_bound = 0 if guess - search_width < 0 else guess - search_width
         for i, y in enumerate(range(low_bound, guess+search_width+1)):
