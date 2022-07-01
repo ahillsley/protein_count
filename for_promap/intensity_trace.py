@@ -51,7 +51,7 @@ class IntensityTrace():
         self.scaled_trace = self.trace * scale
 
         # shift, such that mean background is 0
-        self.scaled_trace -= background_peak_mu
+        self.scaled_trace -= background_peak_mu * scale
 
         # shift, such that mean background is 1
         self.scaled_trace += 1
