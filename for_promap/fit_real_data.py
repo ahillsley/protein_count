@@ -88,12 +88,12 @@ def process_image(img, yx_spots):
             p_on_vit, p_off_vit, states
     return p_values               
 
-p_values = process_image(img, yx_spots)
-parameters = pd.DataFrame(p_values, columns=['p_on_grid', 'p_off_grid', 'p_on_vit','p_off_vit'])
+#p_values = process_image(img, yx_spots)
+#parameters = pd.DataFrame(p_values, columns=['p_on_grid', 'p_off_grid', 'p_on_vit','p_off_vit'])
 
-colors = ['#00CD91','#E7A20B','#FE8A80', '#006E61']
-g = sns.boxplot(data=parameters,
-            linewidth=2.5,
-            palette=(colors))
-f = sns.stripplot(data=parameters, color= 'k', s=3)
+#colors = ['#00CD91','#E7A20B','#FE8A80', '#006E61']
+#g = sns.boxplot(data=parameters,
+           # linewidth=2.5,
+           # palette=(colors))
+#f = sns.stripplot(data=parameters, color= 'k', s=3)
 

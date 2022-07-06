@@ -125,7 +125,7 @@ class TraceModel:
 
     def estimate_y(self, trace, guess, search_width):
         
-        self._check_parameters()
+        # self._check_parameters()
         
         log_probs = np.zeros((search_width*2+1))
         low_bound = 0 if guess - search_width < 0 else guess - search_width
