@@ -34,7 +34,7 @@ class TestCalibration(unittest.TestCase):
        all_traces = extract_traces(img, spots)
        test_traces = all_traces[np.random.randint(0,all_traces.shape[0], 5),:]
        for trace in test_traces:
-          scale = normalize_trace(trace)
+          scaled_trace, scale = normalize_trace(trace)
           
           self.assertGreaterEqual(1/scale, 0)
        

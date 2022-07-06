@@ -6,7 +6,7 @@ from fluorescence_model import FluorescenceModel
 
 class TraceModel:
     '''
-    - Models as intensity trace as a hidden markov model
+    - Models an intensity trace as a hidden Markov model
 
     Args:
 
@@ -42,6 +42,12 @@ class TraceModel:
         log_fwrd_prob = self._forward_alg(trace, y, transition_m, p_initial)
 
         return log_fwrd_prob
+
+
+    def _check_parameters(self):
+
+        if self.p_on is None:
+            raise RuntimeError("Parameters need to be set or fitted first.")
 
     def fit_params():
         '''
@@ -124,8 +130,6 @@ class TraceModel:
         return x_trace
 
     def estimate_y(self, trace, guess, search_width):
-        
-        # self._check_parameters()
         
         log_probs = np.zeros((search_width*2+1))
         low_bound = 0 if guess - search_width < 0 else guess - search_width
@@ -245,3 +249,64 @@ class TraceModel:
 
     def _exp_cdf(self, x, a):
         return 1 - np.exp(-a * x)
+    
+    def _line_search_params(
+            self,
+            trace,
+            y,
+            points=100,
+            p_on_max=0.5,
+            p_off_max=0.5,
+            eps=1e-3,
+            max_iterations=10):
+        '''
+        '''
+
+        p_ons = np.linspace(1e-6, p_on_max, points)
+        p_offs = np.linspace(1e-6, p_off_max, points)
+
+        i = 0
+        prev_prob = None
+
+        while i <= max_iterations:
+
+            best_p_on_prob = None
+            best_p_on = None
+
+            for p_on in p_ons:
+
+                self.p_on = p_on
+                prob = self.p_trace_given_y(trace, y)
+
+                if best_p_on_prob is None or prob > best_p_on_prob:
+                    best_p_on_prob = prob
+                    best_p_on = p_on
+
+            # set model to best p_on observed so far
+            self.p_on = best_p_on
+
+            best_p_off_prob = None
+            best_p_off = None
+
+            for p_off in p_offs:
+
+                self.p_off = p_off
+                prob = self.p_trace_given_y(trace, y)
+
+                if best_p_off_prob is None or prob > best_p_off_prob:
+                    best_p_off_prob = prob
+                    best_p_off = p_off
+
+            # set model to best p_off observed so far
+            self.p_off = best_p_off
+
+            i += 1
+
+            if prev_prob is not None:
+
+                delta_prob = best_p_off_prob - prev_prob
+                assert(delta_prob >= 0)
+                if delta_prob <= eps:
+                    break
+
+            prev_prob = best_p_off_prob
