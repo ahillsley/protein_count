@@ -71,14 +71,16 @@ class IntensityTrace():
         p_off_prob = np.zeros((len(p_offs)))
 
         for i in range(len(p_ons)):
-            test_params = ModelParams(p_ons[i], p_offs[int(points/2)])
-            test_model = TraceModel(test_params, 0.1, len(self.scaled_trace))
+            #test_params = ModelParams(p_ons[i], p_offs[int(points/2)])
+            test_model = TraceModel(ModelParams(), 0.1, len(self.scaled_trace))
+            test_model.set_params(p_ons[i], p_offs[int(points/2)])
             p_on_prob[i] = test_model.p_trace_given_y(self.scaled_trace, 1)
 
         p_on_estimate = p_ons[np.argmax(p_on_prob)]
         for j in range(len(p_offs)):
-            test_params = ModelParams(p_on_estimate, p_offs[j], 1, 0.1, 0.1, 1)
-            test_model = TraceModel(test_params, 0.1, len(self.scaled_trace))
+            #test_params = ModelParams(p_on_estimate, p_offs[j], 1, 0.1, 0.1, 1)
+            test_model = TraceModel(ModelParams(), 0.1, len(self.scaled_trace))
+            test_model.set_params(p_on_estimate, p_offs[j])
             p_off_prob[j] = test_model.p_trace_given_y(self.scaled_trace, 1)
         p_off_estimate = p_offs[np.argmax(p_off_prob)]
 

@@ -4,10 +4,8 @@ from pomegranate import GeneralMixtureModel, LogNormalDistribution
 
 
 class ModelParams:
-    def __init__(self, p_on, p_off, u=1, sigma=0.1, sigma_background=0.1,
+    def __init__(self, u=1, sigma=0.1, sigma_background=0.1,
                  label_eff=1):
-        self.p_on = p_on
-        self.p_off = p_off
         self.u = u
         self.sigma = sigma
         self.sigma_background = sigma_background

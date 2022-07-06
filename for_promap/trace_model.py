@@ -30,34 +30,44 @@ class TraceModel:
     def __init__(self, model_params, step_time, num_frames):
 
         # currently working with p_on/off, might need to switch to k_on/off
-        self.p_on = model_params.p_on
-        self.p_off = model_params.p_off
+        self.p_on = None
+        self.p_off = None
         self.step_time = step_time
         self.num_frames = num_frames
         self.fluorescence_model = FluorescenceModel(model_params)
 
     def p_trace_given_y(self, trace, y):
+        
+        self._check_parameters()
 
         p_initial, transition_m = self._markov_trace(y)
         log_fwrd_prob = self._forward_alg(trace, y, transition_m, p_initial)
 
         return log_fwrd_prob
 
+    def set_params(self, p_on, p_off):
+
+        self.p_on = p_on
+        self.p_off = p_off
+        
+    def fit_params(self, traces, y, method='line_search', **kwargs):
+        '''
+        Fit all the parameters needed for the trace model
+            p_on, p_off
+        '''
+
+        if method == 'line_search':
+            self._line_search_params(traces, y, **kwargs)
+        elif method == 'viterbi':
+            self._viterbi_fit_params(traces, y, **kwargs)
+        return
 
     def _check_parameters(self):
 
         if self.p_on is None:
             raise RuntimeError("Parameters need to be set or fitted first.")
 
-    def fit_params():
-        '''
-        Fit all the parameters needed for the trace model
-            p_on, p_off
-        '''
-
-        return
-
-    def fit_viterbi(self, trace, y):
+    def viterbi_fit_params(self, trace, y):
         '''
         - Uses the viterbi algorithm to determine the most likely state at
             each timepoint of the trace
@@ -130,6 +140,8 @@ class TraceModel:
         return x_trace
 
     def estimate_y(self, trace, guess, search_width):
+        
+        self._check_parameters()
         
         log_probs = np.zeros((search_width*2+1))
         low_bound = 0 if guess - search_width < 0 else guess - search_width
