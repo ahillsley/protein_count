@@ -279,15 +279,18 @@ class TraceModel:
 
         i = 0
         prev_prob = None
+        self.p_off = np.mean(p_offs)
 
         while i <= max_iterations:
 
             best_p_on_prob = None
             best_p_on = None
-
+            
+            
             for p_on in p_ons:
-
+                
                 self.p_on = p_on
+
                 prob = self.p_trace_given_y(trace, y)
 
                 if best_p_on_prob is None or prob > best_p_on_prob:

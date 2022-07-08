@@ -57,7 +57,6 @@ class TestTraceModel(unittest.TestCase):
         return
     
     def test_p_trace_given_y(self):
-        params = ModelParams(0.5, 0.5)
         sim_trace_len = 1000
         trace_simulator = TraceModel(ModelParams(), 0.1, sim_trace_len)
         trace_simulator.set_params(0.5, 0.5)
@@ -78,7 +77,7 @@ class TestFluorescenceModel(unittest.TestCase):
     
     
 if __name__ == '__main__':
-    unittest.main(TestCalibration())
+    unittest.main()
     
     
     
