@@ -1,5 +1,5 @@
 import numpy as np
-from scipy import integrate
+from scipy import integrate, stats
 from pomegranate import GeneralMixtureModel, LogNormalDistribution
 
 
@@ -66,7 +66,8 @@ class FluorescenceModel:
 
         '''
 
-        mu = self.mu + np.log(z)
+        #mu = self.mu + np.log(z)
+        mu = np.log(self.mu * z)
 
         mu = 0 if z == 0 else mu
         sigma = self.sigma2_background if z == 0 else self.sigma
@@ -89,18 +90,56 @@ class FluorescenceModel:
 
         '''
 
+        mu = np.log(self.mu * z_i) # Eq 18,  DOI: Biophysj 106.101428
+        
         if z_i == 0:
             mu = 0
             sigma2 = self.sigma2_background
         else:
-            mu = self.mu + np.log(z_i)
+            mu = np.log(self.mu * z_i)
             sigma2 = self.sigma2
 
         result = integrate.romberg(lambda x: self._log_normal(x_i, mu, sigma2),
-                                   x_i - self.sigma, x_i + self.sigma)
+                                x_i -1/256, x_i)
+        
         return result
 
     def _log_normal(self, x, mu, sigma2):
 
         return 1.0 / (x * np.sqrt(2.0 * np.pi * sigma2)) * \
                 np.exp(-(np.log(x) - mu)**2/(2.0 * sigma2))
+                
+    
+    def approx_phi(self, x, mu, sigma):
+        ''' 
+        - method to approximate the integral value of p_x_i_given z_i
+        -from Zelen & Severo approximation of the standard Normal CDF
+        - Does not work for large differences in x and mu
+        '''
+        b_consts = [0.2316419, 0.319381530, -0.356563782, 1.781477937,
+                       -1.821255978, 1.330274429 ]
+        
+        norm_pdf = 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-(1 / 2) * ((x - mu)/sigma) **2)
+            
+        t = 1 / (1 + b_consts[0] * x) 
+        
+        phi = 1 - norm_pdf * (b_consts[1] * t + b_consts[2] * t**2 + \
+                              b_consts[3] * t**3 + b_consts[4] * t**4 + \
+                              b_consts[5] * t**5)
+            
+        return phi
+        
+    def integrate_from_cdf(self, x, mu, sigma):
+        ''' 
+        - method to approximate the integral value of p_x_i_given z_i
+        - Does not work for large differences in x and mu with a small sigma
+        '''
+        a = stats.norm.pdf(x, mu, sigma)
+        b = stats.norm.pdf(x + (1/256), mu, sigma)
+        
+        prob = a-b
+        return prob
+        
+    
+
+    
