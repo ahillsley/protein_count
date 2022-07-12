@@ -4,10 +4,11 @@ from pomegranate import GeneralMixtureModel, LogNormalDistribution
 
 
 class ModelParams:
-    def __init__(self, u=1, sigma=0.1, sigma_background=0.1,
+    def __init__(self, u=1, sigma=0.1, mean_background=1, sigma_background=0.1,
                  label_eff=1):
         self.u = u
         self.sigma = sigma
+        self.mean_background = mean_background
         self.sigma_background = sigma_background
         self.label_eff = label_eff
 
@@ -38,22 +39,11 @@ class FluorescenceModel:
         self.mu = model_params.u
         self.sigma = model_params.sigma
         self.sigma2 = model_params.sigma**2
+        self.mean_background = model_params.mean_background
         self.sigma2_background = model_params.sigma_background**2
+        self.sigma_background = model_params.sigma_background
         self.label_eff = model_params.label_eff
 
-    def fit_fluorescence(self, trace):
-        '''
-        fit all the parameters needed in fluorescence model
-            mu, sigma, sigma_background
-        '''
-        X = np.expand_dims(np.ravel(trace), 1)
-        model = GeneralMixtureModel.from_samples([LogNormalDistribution,
-                                                  LogNormalDistribution], 2, X)
-        sigma_background = model.distributions[0].parameters[1]
-        sigma = model.distributions[1].parameters[1]
-        mu = model.distributions[1].parameters[0]
-
-        return mu, sigma, sigma_background
 
     def sample_x_i_given_z_i(self, z):
         '''
@@ -66,15 +56,18 @@ class FluorescenceModel:
 
         '''
 
-        #mu = self.mu + np.log(z)
-        mu = np.log(self.mu * z)
+        
+        if z == 0:
+            signal = 0
+        else:
+            mu = np.log(self.mu * z)
+            mean = np.exp(mu + self.sigma2 / 2)
+            signal = np.random.lognormal(mean, self.sigma)
+        
+        background = np.random.lognormal(self.mean_background,
+                                         self.sigma_background)
 
-        mu = 0 if z == 0 else mu
-        sigma = self.sigma2_background if z == 0 else self.sigma
-
-        x = np.random.lognormal(mu, sigma)
-
-        return x
+        return signal + background
 
     def p_x_i_given_z_i(self, x_i, z_i):
         '''
@@ -90,7 +83,7 @@ class FluorescenceModel:
 
         '''
 
-        mu = np.log(self.mu * z_i) # Eq 18,  DOI: Biophysj 106.101428
+        #mu = np.log(self.mu * z_i) # Eq 18,  DOI: Biophysj 106.101428
         
         if z_i == 0:
             mu = 0
@@ -134,8 +127,8 @@ class FluorescenceModel:
         - method to approximate the integral value of p_x_i_given z_i
         - Does not work for large differences in x and mu with a small sigma
         '''
-        a = stats.norm.pdf(x, mu, sigma)
-        b = stats.norm.pdf(x + (1/256), mu, sigma)
+        a = stats.lognorm.pdf(x, sigma, mu)
+        b = stats.lognorm.pdf(x + (1/256), sigma, mu)
         
         prob = a-b
         return prob
