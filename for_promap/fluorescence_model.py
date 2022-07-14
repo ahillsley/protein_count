@@ -5,15 +5,15 @@ import matplotlib.pyplot as plt
 
 class ModelParams:
     def __init__(self,
-                 log_mean_intensity=1,
-                 sigma=0.1,
-                 mean_background=1,
-                 sigma_background=0.1,
+                 mu_i=1,
+                 sigma_i=0.1,
+                 mu_b=1,
+                 sigma_b=0.001,
                  label_eff=1):
-        self.log_mean_intensity = log_mean_intensity
-        self.sigma = sigma
-        self.mean_background = mean_background
-        self.sigma_background = sigma_background
+        self.mu_i = mu_i
+        self.sigma_i = sigma_i
+        self.mu_b = mu_b
+        self.sigma_b = sigma_b
         self.label_eff = label_eff
 
 
@@ -23,13 +23,16 @@ class FluorescenceModel:
     - The emmission probabilities of the hidden markov model
 
     Args:
-        mu:
+        mu_i:
             the mean log intensity of a bound fluorophore
 
-        sigma:
+        sigma_i:
             the standard deviation of the log intensity of a bound fluorophore
 
-        sigma_background:
+        mu_b:
+            the mean log intensity of athe background        
+
+        sigma_b:
             the standard deviation of the log intensity of the background,
                 the mean is assumed to be 0
 
@@ -40,30 +43,45 @@ class FluorescenceModel:
 
     def __init__(self, model_params):
 
-        self.log_mean_intensity = model_params.log_mean_intensity
-        self.sigma = model_params.sigma
-        self.sigma2 = model_params.sigma**2
-        self.mean_background = model_params.mean_background
-        self.sigma2_background = model_params.sigma_background**2
-        self.sigma_background = model_params.sigma_background
+        self.mu_i = model_params.mu_i
+        self.sigma_i = model_params.sigma_i
+        self.sigma_i2 = model_params.sigma_i**2
+        self.mu_b = model_params.mu_b
+        self.sigma_b = model_params.sigma_b
+        self.sigma_b2= model_params.sigma_b**2
         self.label_eff = model_params.label_eff
 
     def sample_x_i_given_z_i(self, z):
+        
+        if z == 0:
+            signal = -np.inf
+        else:
+            mean_i = np.log(z * self.mu_i * np.exp(self.sigma_i2 / 2))
+            signal = np.random.normal(mean_i, self.sigma_i)
+        
+        mean_b = np.log(self.mu_b)
+        background = np.random.normal(mean_b, self.sigma_b)
 
-        mean = np.log(z * self.log_mean_intensity * np.exp(self.sigma2 / 2))
-
-        signal = np.random.normal(mean, self.sigma)
-
-        return self._bring_out(signal)
+        # need to split into sperate exps because changing background should 
+        # not change the estimate of mu_i
+        return self._bring_out(signal) + self._bring_out(background)
 
     def p_x_i_given_z_i(self, x_i, z):
 
         x = self._bring_in(x_i)
 
-        mean = np.log(z * self.log_mean_intensity * np.exp(self.sigma2 / 2))
+        if z ==0:
+            mean_i = -np.inf #
+        else:
+            mean_i = np.log(z * self.mu_i * np.exp(self.sigma_i2 / 2))
+        
+        mean_b = np.log(self.mu_b)
 
-        result = integrate.romberg(lambda x: self._normal(x, mean, self.sigma2),
-                                   x, x + (1/256))
+        mean = np.log(np.exp(mean_i) + np.exp(mean_b))
+        sigma2 = self.sigma_i2 + self.sigma_b2
+
+        result = integrate.romberg(lambda x: self._normal(x, mean,
+                                    sigma2), x, x + (1/256))
 
         return result
 
@@ -115,8 +133,3 @@ class FluorescenceModel:
         return 1.0 / (x * np.sqrt(2.0 * np.pi * sigma2)) * \
             np.exp(-(np.log(x) - mu)**2/(2.0 * sigma2))
 
-
-f_model = FluorescenceModel((ModelParams(1, 0.1)))
-x = np.zeros(10000)
-for i in range(len(x)):
-    x[i] = f_model.sample_x_i_given_z_i(1)
