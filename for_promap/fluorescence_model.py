@@ -1,15 +1,37 @@
 import numpy as np
-from scipy import integrate, stats
+from scipy import integrate
 import matplotlib.pyplot as plt
 
 
-class ModelParams:
+class EmissionParams:
+    '''
+    - Stores all parameters needed for the fluorescence model
+    - Used to calcualte emission probabilities of HMM
+
+    Args:
+        mu_i:
+            the mean intensity of a bound fluorophore
+
+        sigma_i:
+            the standard deviation of the intensity of a bound fluorophore
+
+        mu_b:
+            the mean intensity of the background
+
+        sigma_b:
+            the standard deviation of the intensity of the background
+
+        label_eff:
+            the labeling efficiency of y
+    '''
+
     def __init__(self,
                  mu_i=1,
                  sigma_i=0.1,
                  mu_b=1,
                  sigma_b=0.1,
                  label_eff=1):
+
         self.mu_i = mu_i
         self.sigma_i = sigma_i
         self.mu_b = mu_b
@@ -23,74 +45,84 @@ class FluorescenceModel:
     - The emmission probabilities of the hidden markov model
 
     Args:
-        mu_i:
-            the mean log intensity of a bound fluorophore
+        Emission_Params:
+            Instance of class EmissionParams
 
-        sigma_i:
-            the standard deviation of the log intensity of a bound fluorophore
-
-        mu_b:
-            the mean log intensity of athe background        
-
-        sigma_b:
-            the standard deviation of the log intensity of the background,
-                the mean is assumed to be 0
-
-        label_eff:
-            the labeling efficiency of y
 
     '''
 
-    def __init__(self, model_params):
+    def __init__(self, emission_params):
 
-        self.mu_i = model_params.mu_i
-        self.sigma_i = model_params.sigma_i
-        self.sigma_i2 = model_params.sigma_i**2
-        self.mu_b = model_params.mu_b
-        self.sigma_b = model_params.sigma_b
-        self.sigma_b2= model_params.sigma_b**2
-        self.label_eff = model_params.label_eff
+        self.mu_i = emission_params.mu_i
+        self.sigma_i = emission_params.sigma_i
+        self.sigma_i2 = emission_params.sigma_i**2
+        self.mu_b = emission_params.mu_b
+        self.sigma_b = emission_params.sigma_b
+        self.sigma_b2 = emission_params.sigma_b**2
+        self.label_eff = emission_params.label_eff
 
     def sample_x_i_given_z_i(self, z):
-        
+        '''
+        - simulate the intensity value given a hidden state "z"
+        - random sampling is done in log-space
+            - sample from a normal distribution
+            - exp() at end so final distribution is lognormal
+
+        Args:
+            z:
+                The number of active/on fluorophores
+        '''
+
         if z == 0:
-            signal = -np.inf
+            signal = -np.inf  # has no contribution once out of log space
         else:
             mean_i = np.log(z * self.mu_i * np.exp(self.sigma_i2 / 2))
             signal = np.random.normal(mean_i, self.sigma_i)
-        
+
         mean_b = np.log(self.mu_b)
         background = np.random.normal(mean_b, self.sigma_b)
 
-        # need to split into sperate exps because changing background should 
+        # need to split into sperate exps because changing background should
         # not change the estimate of mu_i
         return self._bring_out(signal) + self._bring_out(background)
 
     def p_x_i_given_z_i(self, x_i, z):
+        '''
+        - calculate the probability that an intensity x_i arrose from hidden
+            state z
+
+        Args:
+            x_i:
+                the intensity value measured at time i
+            z_i:
+                the number of active/on fluorophores at time i
+        '''
 
         x = self._bring_in(x_i)
 
-        if z ==0:
-            mean_i = -np.inf #
+        if z == 0:
+            mean_i = -np.inf
         else:
             mean_i = np.log(z * self.mu_i * np.exp(self.sigma_i2 / 2))
-        
+
         mean_b = np.log(self.mu_b)
 
         mean = np.log(np.exp(mean_i) + np.exp(mean_b))
         sigma2 = self.sigma_i2 + self.sigma_b2
 
-        result = integrate.romberg(lambda x: self._normal(x, mean,
-                                    sigma2), x, x + (1/256))
+        result = integrate.romberg(lambda x: self._normal(x, mean, sigma2),
+                                   x, x + (1/256))
 
         return result
 
     def _normal(self, x, mu, sigma2):
+        # PDF of the normal distribution
 
         return 1.0 / (np.sqrt(2.0 * np.pi * sigma2)) * \
                 np.exp(-(x - mu)**2/(2.0 * sigma2))
 
     def _bring_in(self, x):
+
         return np.log(x)
 
     def _bring_out(self, x):
@@ -132,4 +164,3 @@ class FluorescenceModel:
 
         return 1.0 / (x * np.sqrt(2.0 * np.pi * sigma2)) * \
             np.exp(-(np.log(x) - mu)**2/(2.0 * sigma2))
-
