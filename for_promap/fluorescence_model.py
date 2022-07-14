@@ -109,9 +109,10 @@ class FluorescenceModel:
         ''' 
         - method to approximate the integral value of p_x_i_given z_i
         - Does not work for large differences in x and mu with a small sigma
+        - need to change to cdf
         '''
-        a = self._log_normal(x, mu, sigma**2)
-        b = self._log_normal(x+ (1/256), mu, sigma**2)
+        a = self._normal(x, mu, sigma**2)
+        b = self._normal(x+ (1/256), mu, sigma**2)
         
         prob = np.abs(a-b)
         return prob
@@ -123,3 +124,10 @@ class FluorescenceModel:
             np.exp(-(np.log(x) - mu)**2/(2.0 * sigma2))
             
             
+
+
+
+f_model = FluorescenceModel((ModelParams(1,.1)))
+x = np.zeros(10000)
+for i in range(len(x)):
+    x[i] = f_model.sample_x_i_given_z_i(1)
