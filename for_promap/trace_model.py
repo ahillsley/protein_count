@@ -27,14 +27,14 @@ class TraceModel:
             length of trace
     '''
 
-    def __init__(self, model_params, step_time, num_frames):
+    def __init__(self, emission_params, step_time, num_frames):
 
         # currently working with p_on/off, might need to switch to k_on/off
         self.p_on = None
         self.p_off = None
         self.step_time = step_time
         self.num_frames = num_frames
-        self.fluorescence_model = FluorescenceModel(model_params)
+        self.fluorescence_model = FluorescenceModel(emission_params)
 
     def p_trace_given_y(self, trace, y):
 
