@@ -1,50 +1,12 @@
 import numpy as np
 import unittest
 import pandas as pd
-import calibrate
-from calibrate import normalize_trace, extract_traces, process_image
+import estimate_params
+from estimate_params import extract_traces
 from trace_model import TraceModel
-from fluorescence_model import ModelParams
+from fluorescence_model import FluorescenceModel, ModelParams
 
 
-class TestCalibration(unittest.TestCase):
-
-    def test_normalize_trace(self):
-        image_file_path = '../../Images/0525_5nM_1.tif'
-        spots_file_path = '../../Images/0525_5_nM_1_spots.csv'
-
-        img = calibrate.read_image(image_file_path)
-        spots = pd.read_csv(spots_file_path)
-
-        all_traces = extract_traces(img, spots)
-        test_traces = all_traces[np.random.randint(0,
-                                                   all_traces.shape[0], 1), :]
-        for trace in test_traces:
-            scaled_trace, scale, background_mu = normalize_trace(trace)
-
-            # check that signal peak is greater than background peak
-            self.assertGreaterEqual(1/scale, 0)
-
-            # check that trace is shifted to mean 1
-            self.assertAlmostEqual(np.mean(scaled_trace), 1, delta=0.1)
-
-
-"""
-   def test_fits(self):
-        image_file_path = '../../Images/0525_5nM_1.tif'
-        spots_file_path = '../../Images/0525_5_nM_1_spots.csv'
-
-        img = calibrate.read_image(image_file_path)
-        spots = pd.read_csv(spots_file_path)
-        yx_spots = calibrate.clean_spots(spots, img)
-
-        test_spots = yx_spots[np.random.randint(0, yx_spots.shape[0], 2)]
-        p_values = process_image(img, test_spots)
-
-        # check probabilites are between 0 and 1
-        self.assertGreaterEqual(np.min(p_values), 0)
-        self.assertLessEqual(np.max(p_values), 1)
-"""
 
 
 class TestTraceModel(unittest.TestCase):
@@ -75,7 +37,18 @@ class TestIntensityTrace(unittest.TestCase):
 
 
 class TestFluorescenceModel(unittest.TestCase):
-    def test(self):
+    def test_p_x_given_z(self):
+        z = 5
+        f_model = FluorescenceModel(ModelParams(mu_i=100, mu_b=200))
+
+        sample = f_model.sample_x_i_given_z_i(z)
+
+        probs = np.zeros((10))
+        for i in range(len(probs)):
+            probs[i] = f_model.p_x_i_given_z_i(sample, i)
+        most_likely = np.argmax(probs)
+        
+        self.assertEqual(z, most_likely)
         return
 
 

@@ -8,7 +8,7 @@ class ModelParams:
                  mu_i=1,
                  sigma_i=0.1,
                  mu_b=1,
-                 sigma_b=0.001,
+                 sigma_b=0.1,
                  label_eff=1):
         self.mu_i = mu_i
         self.sigma_i = sigma_i
