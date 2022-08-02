@@ -110,10 +110,12 @@ class FluorescenceModel:
         mean = np.log(np.exp(mean_i) + np.exp(mean_b))
         sigma2 = self.sigma_i2 + self.sigma_b2
 
-        result = integrate.romberg(lambda x: self._normal(x, mean, sigma2),
-                                   x, x + (1/256))
+        #result = integrate.romberg(lambda x: self._normal(x, mean, sigma2),
+                                   #x, x + (1/256))
 
-        return result
+        result_2 = self._integrate_from_cdf(x, mean, sigma2)
+        
+        return result_2
 
     def _normal(self, x, mu, sigma2):
         # PDF of the normal distribution
@@ -122,6 +124,7 @@ class FluorescenceModel:
                 np.exp(-(x - mu)**2/(2.0 * sigma2))
     
     def _normal_cdf(self, x, mu, sigma2):
+        # CDF of the normal function
         
         return 0.5 * (1 + math.erf((x - mu)/np.sqrt(2 * sigma2)))
 
@@ -132,36 +135,14 @@ class FluorescenceModel:
     def _bring_out(self, x):
         return np.exp(x)
 
-    def _approx_phi(self, x, mu, sigma):
-        '''
-        - method to approximate the integral value of p_x_i_given z_i
-        -from Zelen & Severo approximation of the standard Normal CDF
-         - Does not work for large differences in x and mu
-         '''
-        b_consts = [0.2316419, 0.319381530, -0.356563782, 1.781477937,
-                    -1.821255978, 1.330274429]
-
-        norm_pdf = 1 / (sigma * np.sqrt(2 * np.pi)) * \
-            np.exp(- (1 / 2) * ((x - mu) / sigma) ** 2)
-
-        t = 1 / (1 + b_consts[0] * x)
-
-        phi = 1 - norm_pdf * (b_consts[1] * t + b_consts[2] * t**2 +
-                              b_consts[3] * t**3 + b_consts[4] * t**4 +
-                              b_consts[5] * t**5)
-
-        return phi
 
     def _integrate_from_cdf(self, x, mu, sigma):
-        '''
-        - method to approximate the integral value of p_x_i_given z_i
-        - Does not work for large differences in x and mu with a small sigma
-        - need to change to cdf
-        '''
+        #Aproximates the integral of the normal distribution from x : x + 1/256
+        
         a = self._normal_cdf(x, mu, sigma**2)
         b = self._normal_cdf(x + (1/256), mu, sigma**2)
-
         prob = np.abs(a - b)
+        
         return prob
 
     def _log_normal(self, x, mu, sigma2):
