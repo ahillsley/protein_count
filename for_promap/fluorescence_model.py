@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import integrate
 import matplotlib.pyplot as plt
+import math
 
 
 class EmissionParams:
@@ -48,7 +49,6 @@ class FluorescenceModel:
         Emission_Params:
             Instance of class EmissionParams
 
-
     '''
 
     def __init__(self, emission_params):
@@ -77,10 +77,10 @@ class FluorescenceModel:
             signal = -np.inf  # has no contribution once out of log space
         else:
             mean_i = np.log(z * self.mu_i * np.exp(self.sigma_i2 / 2))
-            signal = np.random.normal(mean_i, self.sigma_i)
+            signal = np.random.normal(mean_i, self.sigma_i2)
 
         mean_b = np.log(self.mu_b)
-        background = np.random.normal(mean_b, self.sigma_b)
+        background = np.random.normal(mean_b, self.sigma_b2)
 
         # need to split into sperate exps because changing background should
         # not change the estimate of mu_i
@@ -120,6 +120,10 @@ class FluorescenceModel:
 
         return 1.0 / (np.sqrt(2.0 * np.pi * sigma2)) * \
                 np.exp(-(x - mu)**2/(2.0 * sigma2))
+    
+    def _normal_cdf(self, x, mu, sigma2):
+        
+        return 0.5 * (1 + math.erf((x - mu)/np.sqrt(2 * sigma2)))
 
     def _bring_in(self, x):
 
@@ -154,8 +158,8 @@ class FluorescenceModel:
         - Does not work for large differences in x and mu with a small sigma
         - need to change to cdf
         '''
-        a = self._normal(x, mu, sigma**2)
-        b = self._normal(x + (1/256), mu, sigma**2)
+        a = self._normal_cdf(x, mu, sigma**2)
+        b = self._normal_cdf(x + (1/256), mu, sigma**2)
 
         prob = np.abs(a - b)
         return prob

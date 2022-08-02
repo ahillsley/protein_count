@@ -270,7 +270,7 @@ class TraceModel:
             p_on_max=0.5,
             p_off_max=0.5,
             eps=1e-3,
-            max_iterations=10):
+            max_iterations=3):
         '''
         '''
 
@@ -324,3 +324,5 @@ class TraceModel:
                     break
 
             prev_prob = best_p_off_prob
+            
+        return best_p_on, best_p_off
