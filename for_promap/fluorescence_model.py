@@ -82,7 +82,7 @@ class FluorescenceModel:
         mean_b = np.log(self.mu_b)
         background = np.random.normal(mean_b, self.sigma_b2)
 
-        # need to split into sperate exps because changing background should
+        # split into sperate exps because changing background should
         # not change the estimate of mu_i
         return self._bring_out(signal) + self._bring_out(background)
 
@@ -113,29 +113,15 @@ class FluorescenceModel:
         #result = integrate.romberg(lambda x: self._normal(x, mean, sigma2),
                                    #x, x + (1/256))
 
-        result_2 = self._integrate_from_cdf(x, mean, sigma2)
+        result = self._integrate_from_cdf(x, mean, sigma2)
         
-        return result_2
-
-    def _normal(self, x, mu, sigma2):
-        # PDF of the normal distribution
-
-        return 1.0 / (np.sqrt(2.0 * np.pi * sigma2)) * \
-                np.exp(-(x - mu)**2/(2.0 * sigma2))
+        return result
     
     def _normal_cdf(self, x, mu, sigma2):
         # CDF of the normal function
         
         return 0.5 * (1 + math.erf((x - mu)/np.sqrt(2 * sigma2)))
-
-    def _bring_in(self, x):
-
-        return np.log(x)
-
-    def _bring_out(self, x):
-        return np.exp(x)
-
-
+    
     def _integrate_from_cdf(self, x, mu, sigma):
         #Aproximates the integral of the normal distribution from x : x + 1/256
         
@@ -145,7 +131,20 @@ class FluorescenceModel:
         
         return prob
 
+    def _bring_in(self, x):
+
+        return np.log(x)
+
+    def _bring_out(self, x):
+        return np.exp(x)
+
     def _log_normal(self, x, mu, sigma2):
 
         return 1.0 / (x * np.sqrt(2.0 * np.pi * sigma2)) * \
             np.exp(-(np.log(x) - mu)**2/(2.0 * sigma2))
+
+    def _normal(self, x, mu, sigma2):
+        # PDF of the normal distribution
+
+        return 1.0 / (np.sqrt(2.0 * np.pi * sigma2)) * \
+                np.exp(-(x - mu)**2/(2.0 * sigma2))
